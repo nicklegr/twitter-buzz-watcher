@@ -1,5 +1,7 @@
 #!ruby -Ku
 
+SAVE_TWEET_PAST_DAYS = 7
+
 require 'pp'
 require 'twitter'
 require 'tweetstream'
@@ -54,6 +56,9 @@ class Worker
       if status.has_key?(:retweeted_status)
         # RTされた
         retweeted = status.retweeted_status
+
+        # あまり古いものは無視
+        return if Time.parse(retweeted.created_at) < Time.now - (SAVE_TWEET_PAST_DAYS * 24 * 3600)
 
         # オリジナルを作成 or 探す
         original = Tweet.find_or_initialize_by(status_id: retweeted.id)
