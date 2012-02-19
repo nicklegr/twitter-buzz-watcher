@@ -3,6 +3,26 @@
 require 'pp'
 require 'twitter'
 require 'tweetstream'
+require 'mongoid'
+
+class Tweet
+  include Mongoid::Document
+
+  field :status_id, type: Integer
+  field :text, type: String
+
+  field :user_id, type: Integer
+  field :screen_name, type: String
+  field :profile_image_url, type: String
+  
+  field :retweet_count, type: Integer
+  field :created_at, type: DateTime # Twitterから取得した時刻。not レコード作成時刻
+
+  embeds_many :retweets, :class_name => "Tweet", :cyclic => true
+  embedded_in :original_tweet, :class_name => "Tweet", :cyclic => true
+
+  validates_uniqueness_of :status_id
+end
 
 class Worker
   def initialize
@@ -32,7 +52,37 @@ class Worker
       # pp status
 
       if status.has_key?(:retweeted_status)
+        # RTされた
         retweeted = status.retweeted_status
+
+        # オリジナルを作成 or 探す
+        original = Tweet.find_or_initialize_by(status_id: retweeted.id)
+        if original.new?
+          original.status_id = retweeted.id
+          original.text = retweeted.text
+          original.user_id = retweeted.user.id
+          original.screen_name = retweeted.user.screen_name
+          original.profile_image_url = retweeted.user.profile_image_url
+          # RT数は毎回更新
+          original.created_at = retweeted.created_at
+        end
+
+        # RT数は毎回更新
+        original.retweet_count = retweeted.retweet_count
+
+        original.retweets.find_or_initialize_by(status_id: status.id) do |record|
+          if record.new?
+            record.status_id = status.id
+            # textは容量の無駄なので保存しない
+            record.user_id = status.user.id
+            record.screen_name = status.user.screen_name
+            record.profile_image_url = status.user.profile_image_url
+            record.retweet_count = status.retweet_count
+            record.created_at = status.created_at
+          end
+        end
+
+        original.save!
 
         id = retweeted.id
         count = retweeted.retweet_count
@@ -51,6 +101,11 @@ end
 
 
 $stdout.sync = true
+
+Mongoid.configure do |conf|
+  # uri: ENV['MONGOHQ_URL'],
+  conf.master = Mongo::Connection.new.db('buzz_watcher')
+end
 
 loop do
   begin
