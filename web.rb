@@ -8,7 +8,7 @@ require 'pp'
 require 'sinatra'
 require 'haml'
 require './db'
-require './twitter_api'
+require './twitter_util'
 
 # グラフ描画コードを生成
 def create_draw_chart_code(status_ids, rows)
@@ -58,7 +58,7 @@ get '/' do
   # グラフ描画用のデータ生成
   tweets.each do |tweet|
     @status_ids << tweet.status_id
-    @embed_tweets[ tweet.status_id ] = TwitterAPI.new.embed_tweet(tweet.status_id) # @todo キャッシュする
+    @embed_tweets[ tweet.status_id ] = TwitterUtil.embed_tweet(tweet.status_id)
 
     rt_count_max = 0
 
