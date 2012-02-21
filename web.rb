@@ -51,7 +51,8 @@ get '/' do
     Tweet.where(:created_at.gt => one_day_ago).where(:user_id => user_id).desc(:retweet_count).limit(TWEET_PER_BOT)
   end
 
-  tweets.flatten!.compact!
+  tweets.flatten!
+  tweets.compact!
   tweets.sort! do |a, b| b.retweet_count <=> a.retweet_count end
   tweets = tweets[0, TWEET_SHOW_COUNT]
 
