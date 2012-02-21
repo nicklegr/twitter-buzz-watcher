@@ -22,6 +22,13 @@ class Tweet
 end
 
 Mongoid.configure do |conf|
-  # uri: ENV['MONGOHQ_URL'],
-  conf.master = Mongo::Connection.new.db('buzz_watcher')
+  if ENV['MONGOLAB_URI']
+    # production
+    uri = URI.parse(ENV['MONGOLAB_URI'])
+    conn = Mongo::Connection.from_uri(ENV['MONGOLAB_URI'])
+    conf.master = conn.db(uri.path.gsub(/^\//, ''))
+  else
+    # testing
+    conf.master = Mongo::Connection.new.db('buzz_watcher')
+  end
 end
