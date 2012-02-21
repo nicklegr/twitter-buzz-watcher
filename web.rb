@@ -57,22 +57,30 @@ get '/' do
 
   # グラフ描画用のデータ生成
   tweets.each do |tweet|
+    next if tweet.retweets.size == 0
+
     @status_ids << tweet.status_id
     @embed_tweets[ tweet.status_id ] = TwitterUtil.embed_tweet(tweet.status_id)
 
     rt_count_max = 0
+    
+    data = Array.new
+    initial_rt_count = tweet.retweets.asc(:created_at).first.retweet_count
 
-    data = tweet.retweets.asc(:created_at).map do |rt|
+    tweet.retweets.asc(:created_at).each_with_index do |rt, index|
       time_offset = (rt.created_at - tweet.created_at).to_i
       h = time_offset / 3600
       m = (time_offset / 60) % 60
       s = time_offset % 60
 
       time_str = sprintf("[%d,%d,%d]", h, m, s)
-      rt_count = rt.retweet_count
+
+      # retweet_countは変な値が返ってくることがあるので、適当に補正する
+      rt_count = [rt.retweet_count, initial_rt_count + index].max
+
       rt_count_max = [rt_count, rt_count_max].max
 
-      "[#{time_str},#{rt_count}]"
+      data << "[#{time_str},#{rt_count}]"
     end
 
     @rows[ tweet.status_id ] = data.join(",")
