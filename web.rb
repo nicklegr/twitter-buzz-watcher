@@ -63,10 +63,10 @@ get '/' do
     @status_ids << tweet.status_id
     @embed_tweets[ tweet.status_id ] = TwitterUtil.embed_tweet(tweet.status_id)
 
-    rt_count_max = 0
+    rt_count_max = 1
     
     data = Array.new
-    initial_rt_count = tweet.retweets.asc(:created_at).first.retweet_count
+    estimate_rt_count = [tweet.retweets.asc(:created_at).first.retweet_count, 1].max
 
     tweet.retweets.asc(:created_at).each_with_index do |rt, index|
       time_offset = (rt.created_at - tweet.created_at).to_i
@@ -77,7 +77,8 @@ get '/' do
       time_str = sprintf("[%d,%d,%d]", h, m, s)
 
       # retweet_countは変な値が返ってくることがあるので、適当に補正する
-      rt_count = [rt.retweet_count, initial_rt_count + index].max
+      rt_count = [rt.retweet_count, estimate_rt_count].max
+      estimate_rt_count = rt_count + 1
 
       rt_count_max = [rt_count, rt_count_max].max
 
