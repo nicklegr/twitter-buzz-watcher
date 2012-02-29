@@ -68,7 +68,7 @@ get '/' do
     data = Array.new
     estimate_rt_count = [tweet.retweets.asc(:created_at).first.retweet_count, 1].max
 
-    tweet.retweets.asc(:created_at).each_with_index do |rt, index|
+    tweet.retweets.only(:created_at, :retweet_count).asc(:created_at).each_with_index do |rt, index|
       time_offset = (rt.created_at - tweet.created_at).to_i
       h = time_offset / 3600
       m = (time_offset / 60) % 60
